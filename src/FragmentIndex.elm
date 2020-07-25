@@ -1,4 +1,13 @@
-module FragmentIndex exposing (Index, empty, insert, insertMany, search, searchWithList)
+module FragmentIndex exposing
+    ( Index
+    , empty
+    , insert
+    , insertMany
+    , remove
+    , removeAll
+    , search
+    , searchWithList
+    )
 
 import MultiDict exposing (MultiDict)
 import Set exposing (Set)
@@ -26,6 +35,28 @@ normalize str =
 insert : String -> comparable -> Index comparable -> Index comparable
 insert key value dict =
     MultiDict.insert (normalize key) value dict
+
+
+remove : String -> comparable -> Index comparable -> Index comparable
+remove key value dict =
+    MultiDict.remove (normalize key) value dict
+
+
+removeAll : String -> comparable -> Index comparable -> Index comparable
+removeAll str value dict =
+    let
+        keys =
+            str
+                |> String.words
+                |> List.map (String.left prefixLength)
+                |> List.filter (\w -> String.length w >= prefixLength)
+    in
+    case List.head keys of
+        Nothing ->
+            dict
+
+        Just firstKey ->
+            List.foldl (\key dict_ -> remove key value dict_) (remove firstKey value dict) (List.drop 1 keys)
 
 
 insertMany : String -> comparable -> Index comparable -> Index comparable

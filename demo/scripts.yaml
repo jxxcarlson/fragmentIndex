@@ -1,0 +1,3 @@
+scripts:
+  make:
+    cmd: elm make src/Main.elm

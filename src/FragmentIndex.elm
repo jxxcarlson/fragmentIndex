@@ -1,20 +1,22 @@
 module FragmentIndex exposing
-    ( Index
-    , d
-    , empty
-    , insert
-    , insertOne
-    , remove
-    , removeOne
-    , search
-    , searchWithList
+    ( FragmentIndex, testData, empty, insert, insertOne, remove, removeOne, search, searchWithList
+    , size
     )
+
+{-| FragmentIndex provides a kind of dictionary for making rapid conjunctive searches.
+
+@docs FragmentIndex, testData, empty, insert, insertOne, remove, removeOne, search, searchWithList
+
+-}
 
 import MultiDict exposing (MultiDict)
 import Set exposing (Set)
 
 
-type alias Index comparable =
+{-| A MultiDict (Janiczek/elm-bidict) whose keys are strings and whose
+values are comparables, e.g, strings or integers.
+-}
+type alias FragmentIndex comparable =
     MultiDict String comparable
 
 
@@ -30,8 +32,27 @@ prefixLength =
 
 {-| Create empty FragmentIndex
 -}
+empty : FragmentIndex comparable
 empty =
     MultiDict.empty
+
+
+{-| Get size of index.
+-}
+size : FragmentIndex comparable -> Int
+size index =
+    MultiDict.size index
+
+
+{-|
+
+    > insertOne "foobar" 77 empty
+    MultiDict (Dict.fromList [("foo",Set.fromList [77])])
+
+-}
+insertOne : String -> comparable -> FragmentIndex comparable -> FragmentIndex comparable
+insertOne key value dict =
+    MultiDict.insert (normalize key) value dict
 
 
 {-|
@@ -40,7 +61,7 @@ empty =
     MultiDict (Dict.fromList [("gen",Set.fromList [717]),("int",Set.fromList [717]),("mag",Set.fromList [717])])
 
 -}
-insert : String -> comparable -> Index comparable -> Index comparable
+insert : String -> comparable -> FragmentIndex comparable -> FragmentIndex comparable
 insert str value dict =
     let
         keys =
@@ -54,11 +75,22 @@ insert str value dict =
 
 {-|
 
+    > insertOne "foobar" 77 empty |> removeOne "foobar" 77
+    MultiDict (Dict.fromList [])
+
+-}
+removeOne : String -> comparable -> FragmentIndex comparable -> FragmentIndex comparable
+removeOne key value dict =
+    MultiDict.remove (normalize key) value dict
+
+
+{-|
+
     > d |> remove "Comp Music" 4 |> search "comp"
     Set.fromList [2,3]
 
 -}
-remove : String -> comparable -> Index comparable -> Index comparable
+remove : String -> comparable -> FragmentIndex comparable -> FragmentIndex comparable
 remove str value dict =
     let
         keys =
@@ -82,35 +114,31 @@ normalize str =
         |> String.left prefixLength
 
 
-insertOne : String -> comparable -> Index comparable -> Index comparable
-insertOne key value dict =
-    MultiDict.insert (normalize key) value dict
-
-
-removeOne : String -> comparable -> Index comparable -> Index comparable
-removeOne key value dict =
-    MultiDict.remove (normalize key) value dict
-
-
 {-|
 
-    > search "comp" d
+    > search "comp" testData
     Set.fromList [2,3,4]
         : Set.Set number
-    > search "mus comp" d
+    > search "mus comp" testData
     Set.fromList [4] : Set.Set number
-    > search "qua" d
+    > search "qua" testData
     Set.fromList [1,2] : Set.Set number
-    > search "qua comp" d
+    > search "qua comp" testData
     Set.fromList [2] : Set.Set number
 
 -}
-search : String -> Index comparable -> Set comparable
+search : String -> FragmentIndex comparable -> Set comparable
 search keyString index =
     searchWithList (String.words keyString) index
 
 
-searchWithList : List String -> Index comparable -> Set comparable
+{-|
+
+    > searchWithList ["mus", "comp"] testData
+    Set.fromList [4]
+
+-}
+searchWithList : List String -> FragmentIndex comparable -> Set comparable
 searchWithList keyList_ index =
     let
         keyList =
@@ -130,9 +158,15 @@ searchWithList keyList_ index =
 -- TEST DATA
 
 
-d =
+{-| Some test data
+-}
+testData : FragmentIndex Int
+testData =
     empty
-        |> insert "Notes on Quantum Mechanics, The Real Deal" 1
-        |> insert "Foundation of Quantum Computing and Ordinary Computing" 2
-        |> insert "Intro to Computing Engineering" 3
+        |> insert "Quantum Mechanics, The Real Deal" 1
+        |> insert "Foundations of Quantum Computing" 2
+        |> insert "Intro to Computer Engineering" 3
         |> insert "Computer Music" 4
+        |> insert "Introduction to Music Theory" 5
+        |> insert "Card Tricks, an Introductory Tutorial" 6
+        |> insert "Card Games and Board Games" 7

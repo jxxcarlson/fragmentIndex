@@ -1,10 +1,11 @@
 module FragmentIndex exposing
     ( Index
+    , d
     , empty
     , insert
-    , insertMany
+    , insertOne
     , remove
-    , removeAll
+    , removeOne
     , search
     , searchWithList
     )
@@ -17,33 +18,48 @@ type alias Index comparable =
     MultiDict String comparable
 
 
+{-|
+
+    Keys stored in the index are truncatd to three characters.
+    Keys must have three characters.
+
+-}
 prefixLength =
     3
 
 
+{-| Create empty FragmentIndex
+-}
 empty =
     MultiDict.empty
 
 
-normalize : String -> String
-normalize str =
-    str
-        |> String.toLower
-        |> String.left prefixLength
+{-|
 
+    > insert "Introduction to General Magic" 717 empty
+    MultiDict (Dict.fromList [("gen",Set.fromList [717]),("int",Set.fromList [717]),("mag",Set.fromList [717])])
 
+-}
 insert : String -> comparable -> Index comparable -> Index comparable
-insert key value dict =
-    MultiDict.insert (normalize key) value dict
+insert str value dict =
+    let
+        keys =
+            str
+                |> String.words
+                |> List.map (String.left prefixLength)
+                |> List.filter (\w -> String.length w >= prefixLength)
+    in
+    List.foldl (\key dict_ -> insertOne key value dict_) dict keys
 
 
+{-|
+
+    > d |> remove "Comp Music" 4 |> search "comp"
+    Set.fromList [2,3]
+
+-}
 remove : String -> comparable -> Index comparable -> Index comparable
-remove key value dict =
-    MultiDict.remove (normalize key) value dict
-
-
-removeAll : String -> comparable -> Index comparable -> Index comparable
-removeAll str value dict =
+remove str value dict =
     let
         keys =
             str
@@ -56,19 +72,24 @@ removeAll str value dict =
             dict
 
         Just firstKey ->
-            List.foldl (\key dict_ -> remove key value dict_) (remove firstKey value dict) (List.drop 1 keys)
+            List.foldl (\key dict_ -> removeOne key value dict_) (removeOne firstKey value dict) (List.drop 1 keys)
 
 
-insertMany : String -> comparable -> Index comparable -> Index comparable
-insertMany str value dict =
-    let
-        keys =
-            str
-                |> String.words
-                |> List.map (String.left prefixLength)
-                |> List.filter (\w -> String.length w >= prefixLength)
-    in
-    List.foldl (\key dict_ -> insert key value dict_) dict keys
+normalize : String -> String
+normalize str =
+    str
+        |> String.toLower
+        |> String.left prefixLength
+
+
+insertOne : String -> comparable -> Index comparable -> Index comparable
+insertOne key value dict =
+    MultiDict.insert (normalize key) value dict
+
+
+removeOne : String -> comparable -> Index comparable -> Index comparable
+removeOne key value dict =
+    MultiDict.remove (normalize key) value dict
 
 
 {-|
@@ -111,7 +132,7 @@ searchWithList keyList_ index =
 
 d =
     empty
-        |> insertMany "Notes on Quantum Mechanics, The Real Deal" 1
-        |> insertMany "Foundation of Quantum Computing and Ordinary Computing" 2
-        |> insertMany "Intro to Computing Engineering" 3
-        |> insertMany "Computational Music" 4
+        |> insert "Notes on Quantum Mechanics, The Real Deal" 1
+        |> insert "Foundation of Quantum Computing and Ordinary Computing" 2
+        |> insert "Intro to Computing Engineering" 3
+        |> insert "Computer Music" 4
